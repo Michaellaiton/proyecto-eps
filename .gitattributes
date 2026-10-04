@@ -1,0 +1,5 @@
+# Finales de línea normalizados (LF en el repositorio) para evitar diferencias entre Windows y Linux.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary

@@ -1,0 +1,408 @@
+:root {
+  --color-fondo: #f5f7f6;
+  --color-texto: #1d2b25;
+  --color-secundario: #5b6b64;
+  --color-ok: #1f9d55;
+  --color-falla: #d64545;
+  --color-primario: #11734b;
+  --color-borde: #d5ddd9;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--color-texto);
+  background: var(--color-fondo);
+}
+
+body {
+  margin: 0;
+}
+
+.contenedor {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 48px 16px;
+}
+
+.subtitulo {
+  color: var(--color-secundario);
+}
+
+.indicador {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.indicador__punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.indicador__punto--ok {
+  background: var(--color-ok);
+}
+
+.indicador__punto--falla {
+  background: var(--color-falla);
+}
+
+.indicador__etiqueta {
+  font-weight: 600;
+  min-width: 120px;
+}
+
+/* --- Estructura --- */
+.contenedor--angosto {
+  max-width: 420px;
+}
+
+.barra {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--color-borde);
+}
+
+.barra__marca {
+  color: var(--color-primario);
+}
+
+.barra__usuario {
+  margin-left: auto;
+  color: var(--color-secundario);
+}
+
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid var(--color-borde);
+  border-radius: 10px;
+}
+
+.tarjeta h2 {
+  margin: 0;
+}
+
+.rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+/* --- Formularios --- */
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.campo label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.campo input,
+.campo select {
+  padding: 9px 10px;
+  border: 1px solid var(--color-borde);
+  border-radius: 6px;
+  font: inherit;
+  background: #ffffff;
+}
+
+.boton {
+  align-self: flex-start;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px;
+  background: var(--color-primario);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.boton--secundario {
+  background: transparent;
+  color: var(--color-primario);
+  border: 1px solid var(--color-primario);
+  padding: 6px 12px;
+}
+
+/* --- Franjas horarias --- */
+.franjas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.franjas legend {
+  font-weight: 600;
+  padding: 0 6px;
+}
+
+.franja {
+  padding: 8px 12px;
+  border: 1px solid var(--color-borde);
+  border-radius: 6px;
+  background: #ffffff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.franja--elegida {
+  background: var(--color-primario);
+  border-color: var(--color-primario);
+  color: #ffffff;
+}
+
+/* --- Mensajes, pestañas y tablas --- */
+.mensaje {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+
+.mensaje--error {
+  background: #fdecec;
+  color: #8a1f1f;
+}
+
+.mensaje--exito {
+  background: #e7f6ee;
+  color: #145c34;
+}
+
+.pestanas {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.pestana {
+  padding: 10px 16px;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  color: var(--color-secundario);
+}
+
+.pestana--activa {
+  border-bottom-color: var(--color-primario);
+  color: var(--color-texto);
+  font-weight: 600;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabla th,
+.tabla td {
+  padding: 10px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-borde);
+}
+
+.estado {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  background: #eef1f0;
+}
+
+.estado--agendada {
+  background: #e7f6ee;
+  color: #145c34;
+}
+
+.estado--cancelada {
+  background: #fdecec;
+  color: #8a1f1f;
+}
+
+.estado-servicios {
+  margin-top: 24px;
+}
+
+@media (max-width: 640px) {
+  .tabla thead {
+    display: none;
+  }
+
+  .tabla td {
+    display: block;
+    border: none;
+    padding: 4px 0;
+  }
+
+  .tabla tr {
+    display: block;
+    border-bottom: 1px solid var(--color-borde);
+    padding: 8px 0;
+  }
+}
+
+/* --- Panel de administración --- */
+.encabezado {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.tarjeta h3 {
+  margin: 0;
+}
+
+.tarjeta--resaltada {
+  border-color: var(--color-primario);
+  background: #f7fbf9;
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.filtros .campo {
+  min-width: 160px;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.boton--peligro {
+  background: transparent;
+  color: var(--color-falla);
+  border: 1px solid var(--color-falla);
+  padding: 6px 12px;
+}
+
+.fila--inactiva td {
+  color: var(--color-secundario);
+}
+
+.tabla input,
+.tabla select {
+  padding: 6px 8px;
+  border: 1px solid var(--color-borde);
+  border-radius: 6px;
+  font: inherit;
+}
+
+.tabla tfoot th {
+  border-top: 2px solid var(--color-borde);
+}
+
+.pestanas {
+  flex-wrap: wrap;
+}
+
+.indicadores {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.indicador-tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+}
+
+.indicador-tarjeta--alerta {
+  border-color: var(--color-falla);
+  background: #fdf5f5;
+}
+
+.indicador-tarjeta__titulo {
+  color: var(--color-secundario);
+  font-size: 0.9rem;
+}
+
+.indicador-tarjeta__valor {
+  font-size: 1.8rem;
+}
+
+.indicador-tarjeta__detalle {
+  font-size: 0.8rem;
+  color: var(--color-secundario);
+}
+
+.paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.barra-ocupacion {
+  position: relative;
+  min-width: 110px;
+  height: 22px;
+  border-radius: 4px;
+  background: #eef1f0;
+  overflow: hidden;
+}
+
+.barra-ocupacion__relleno {
+  height: 100%;
+  background: #8fd1ad;
+}
+
+.barra-ocupacion span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.campo--ancho {
+  flex: 1;
+  min-width: 240px;
+}
+
+.acciones input[type='date'] {
+  padding: 6px 8px;
+  border: 1px solid var(--color-borde);
+  border-radius: 6px;
+  font: inherit;
+}
+
+.mensaje--aviso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #fff7e6;
+  color: #6b4500;
+}

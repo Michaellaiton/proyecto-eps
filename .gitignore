@@ -1,0 +1,19 @@
+# Secretos y configuración local
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+dist/
+
+# Editores y sistema
+.vscode/
+.idea/
+Thumbs.db
