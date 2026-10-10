@@ -4,6 +4,7 @@ Modelos de la oferta médica: especialidades, doctores, horario base recurrente 
 La oferta se representa como un horario recurrente; las franjas libres se calculan a partir de él,
 sin materializar franjas vacías en la base de datos.
 """
+
 from django.conf import settings
 from django.db import models
 from django.db.models import F, Q

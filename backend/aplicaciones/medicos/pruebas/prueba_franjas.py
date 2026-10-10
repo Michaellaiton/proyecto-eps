@@ -1,4 +1,5 @@
 """Pruebas unitarias del cálculo de franjas (no usan base de datos). REQ-01 y REQ-05."""
+
 from datetime import time
 from types import SimpleNamespace
 

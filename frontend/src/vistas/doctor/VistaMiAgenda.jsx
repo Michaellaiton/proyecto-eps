@@ -1,112 +1,115 @@
-// Agenda del día del médico: franjas libres, bloqueadas y citas, con registro de atención (CU-04).
+// Agenda del día del médico en línea de tiempo, con registro de atención (CU-04).
 import { useState } from 'react'
+import { CalendarCheck, CalendarOff, CalendarX2, CircleCheck, CircleX, Clock, Hourglass, Users } from 'lucide-react'
 
+import Boton from '../../componentes/Boton.jsx'
+import { Cargando, Vacio } from '../../componentes/Estados.jsx'
+import Insignia, { EstadoCita } from '../../componentes/Insignia.jsx'
 import MensajeError from '../../componentes/MensajeError.jsx'
+import SelectorDias from '../../componentes/SelectorDias.jsx'
 import TarjetaIndicador from '../../componentes/TarjetaIndicador.jsx'
+import { usarAvisos } from '../../controladores/ContextoAvisos.jsx'
 import { usarConsulta } from '../../controladores/usarConsulta.js'
 import { consultarMiAgenda, registrarAtencion } from '../../servicios/medicoServicio.js'
 import { formatearFecha, hoyIso, sumarDias, yaLlego } from '../../utilidades/fechas.js'
 
-const TEXTO_ESTADO_FRANJA = { libre: 'Libre', bloqueada: 'Bloqueada' }
+const CLASE_POR_ESTADO = { Agendada: 'cita', Atendida: 'atendida', 'No asistio': 'ausente' }
+
+function FranjaAgenda({ franja, fecha, alRegistrar, ocupado }) {
+  const { cita, bloqueo } = franja
+  const tipo = cita ? CLASE_POR_ESTADO[cita.estado] : franja.estado
+  return (
+    <div className={`franja-agenda franja-agenda--${tipo}`}>
+      <span className="franja-agenda__hora">{franja.hora}</span>
+      <span className="franja-agenda__punto" aria-hidden="true" />
+      <div>
+        {cita ? (
+          <>
+            <strong>{cita.paciente}</strong>
+            <div className="texto-suave">{cita.documento}</div>
+          </>
+        ) : bloqueo ? (
+          <span className="texto-suave">{bloqueo.motivo}</span>
+        ) : (
+          <span className="texto-suave">Libre</span>
+        )}
+      </div>
+      <div className="acciones">
+        {cita && cita.estado !== 'Agendada' && <EstadoCita estado={cita.estado} />}
+        {bloqueo && !cita && (
+          <Insignia tono="aviso" icono={CalendarOff}>
+            Bloqueada
+          </Insignia>
+        )}
+        {cita?.estado === 'Agendada' &&
+          (yaLlego(fecha, franja.hora) ? (
+            <>
+              <Boton tamano="pequeno" icono={CircleCheck} disabled={ocupado} onClick={() => alRegistrar(cita.id_cita, 'Atendida')}>
+                Atendida
+              </Boton>
+              <Boton variante="peligro" tamano="pequeno" icono={CircleX} disabled={ocupado} onClick={() => alRegistrar(cita.id_cita, 'No asistio')}>
+                No asistió
+              </Boton>
+            </>
+          ) : (
+            <Insignia tono="info" icono={Hourglass}>
+              Pendiente
+            </Insignia>
+          ))}
+      </div>
+    </div>
+  )
+}
 
 export default function VistaMiAgenda() {
   const [fecha, setFecha] = useState(hoyIso)
-  const [errorAccion, setErrorAccion] = useState(null)
+  const [ocupado, setOcupado] = useState(false)
+  const avisar = usarAvisos()
   const agenda = usarConsulta(() => consultarMiAgenda(fecha), [fecha])
   const a = agenda.datos
 
   async function registrar(idCita, estado) {
-    setErrorAccion(null)
+    setOcupado(true)
     try {
       await registrarAtencion(idCita, estado)
+      avisar.exito(estado === 'Atendida' ? 'Atención registrada' : 'Inasistencia registrada')
       agenda.recargar()
     } catch (e) {
-      setErrorAccion(e)
+      avisar.error(e)
+    } finally {
+      setOcupado(false)
     }
   }
 
   return (
-    <section className="tarjeta">
-      <div className="encabezado">
-        <h2>Mi agenda</h2>
-        <div className="acciones">
-          <button type="button" className="boton boton--secundario" onClick={() => setFecha((f) => sumarDias(f, -1))}>
-            ← Día anterior
-          </button>
-          <button type="button" className="boton boton--secundario" onClick={() => setFecha(hoyIso())}>
-            Hoy
-          </button>
-          <button type="button" className="boton boton--secundario" onClick={() => setFecha((f) => sumarDias(f, 1))}>
-            Día siguiente →
-          </button>
-          <input aria-label="Fecha de la agenda" type="date" value={fecha} onChange={(e) => e.target.value && setFecha(e.target.value)} />
-        </div>
-      </div>
-      <p className="subtitulo">{formatearFecha(fecha)}</p>
-
-      <MensajeError error={agenda.error || errorAccion} />
-      {agenda.cargando && <p>Cargando…</p>}
-      {a && !agenda.cargando && (
-        <>
+    <>
+      <section className="tarjeta">
+        <SelectorDias valor={fecha} alElegir={setFecha} desde={sumarDias(hoyIso(), -7)} dias={28} />
+        <p className="texto-suave">{formatearFecha(fecha)}</p>
+        <MensajeError error={agenda.error} />
+        {a && (
           <div className="indicadores">
-            <TarjetaIndicador titulo="Citas" valor={a.resumen.citas} />
-            <TarjetaIndicador titulo="Por atender" valor={a.resumen.agendadas} />
-            <TarjetaIndicador titulo="Atendidas" valor={a.resumen.atendidas} />
-            <TarjetaIndicador titulo="No asistió" valor={a.resumen.no_asistio} />
-            <TarjetaIndicador titulo="Franjas libres" valor={a.resumen.libres} />
-            <TarjetaIndicador titulo="Bloqueadas" valor={a.resumen.bloqueadas} />
+            <TarjetaIndicador titulo="Citas" valor={a.resumen.citas} icono={Users} variante="info" />
+            <TarjetaIndicador titulo="Por atender" valor={a.resumen.agendadas} icono={Clock} />
+            <TarjetaIndicador titulo="Atendidas" valor={a.resumen.atendidas} icono={CalendarCheck} />
+            <TarjetaIndicador titulo="No asistió" valor={a.resumen.no_asistio} icono={CalendarX2} variante="alerta" />
           </div>
+        )}
+      </section>
 
-          {a.franjas.length === 0 ? (
-            <p>No tiene horario de atención este día.</p>
-          ) : (
-            <table className="tabla">
-              <thead>
-                <tr>
-                  <th>Hora</th>
-                  <th>Estado</th>
-                  <th>Paciente</th>
-                  <th>Documento</th>
-                  <th aria-label="Acciones" />
-                </tr>
-              </thead>
-              <tbody>
-                {a.franjas.map((f) => (
-                  <tr key={f.hora} className={f.estado === 'cita' ? '' : 'fila--inactiva'}>
-                    <td>
-                      <strong>{f.hora}</strong>
-                    </td>
-                    <td>
-                      {f.cita ? (
-                        <span className={`estado estado--${f.cita.estado.replace(' ', '-').toLowerCase()}`}>{f.cita.estado}</span>
-                      ) : (
-                        <span className="estado">{TEXTO_ESTADO_FRANJA[f.estado]}</span>
-                      )}
-                    </td>
-                    <td>{f.cita?.paciente ?? (f.bloqueo ? `Bloqueo: ${f.bloqueo.motivo}` : '—')}</td>
-                    <td>{f.cita?.documento ?? ''}</td>
-                    <td className="acciones">
-                      {f.cita?.estado === 'Agendada' &&
-                        (yaLlego(a.fecha, f.hora) ? (
-                          <>
-                            <button type="button" className="boton boton--secundario" onClick={() => registrar(f.cita.id_cita, 'Atendida')}>
-                              Atendida
-                            </button>
-                            <button type="button" className="boton boton--peligro" onClick={() => registrar(f.cita.id_cita, 'No asistio')}>
-                              No asistió
-                            </button>
-                          </>
-                        ) : (
-                          <small>Pendiente</small>
-                        ))}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </>
-      )}
-    </section>
+      <section className="tarjeta">
+        {agenda.cargando ? (
+          <Cargando />
+        ) : a?.franjas.length === 0 ? (
+          <Vacio icono={CalendarOff} titulo="Sin horario de atención este día" />
+        ) : (
+          <div className="linea-tiempo">
+            {a?.franjas.map((f) => (
+              <FranjaAgenda key={f.hora} franja={f} fecha={a.fecha} alRegistrar={registrar} ocupado={ocupado} />
+            ))}
+          </div>
+        )}
+      </section>
+    </>
   )
 }

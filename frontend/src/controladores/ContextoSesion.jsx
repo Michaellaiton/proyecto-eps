@@ -13,6 +13,7 @@ export function ProveedorSesion({ children }) {
   const cerrar = useCallback(() => {
     borrarSesion()
     setSesion(null)
+    window.location.hash = ''
   }, [])
 
   useEffect(() => registrarAlExpirarSesion(cerrar), [cerrar])
@@ -26,8 +27,17 @@ export function ProveedorSesion({ children }) {
     setSesion(nueva)
   }, [])
 
+  // Vuelve a leer los datos del usuario (por ejemplo, después de editar el perfil).
+  const actualizarUsuario = useCallback((usuario) => {
+    setSesion((actual) => {
+      const nueva = { ...actual, usuario }
+      guardarSesion(nueva)
+      return nueva
+    })
+  }, [])
+
   return (
-    <ContextoSesion.Provider value={{ usuario: sesion?.usuario ?? null, iniciar, cerrar }}>
+    <ContextoSesion.Provider value={{ usuario: sesion?.usuario ?? null, iniciar, cerrar, actualizarUsuario }}>
       {children}
     </ContextoSesion.Provider>
   )

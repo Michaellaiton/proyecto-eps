@@ -1,4 +1,5 @@
 """Datos de prueba compartidos por todas las pruebas (pytest exige el nombre conftest.py)."""
+
 from datetime import time, timedelta
 
 import pytest
@@ -32,8 +33,12 @@ def crear_paciente(db):
     def _crear(numero):
         usuario = Usuario.objects.create_user(username=f"paciente{numero}", password=CLAVE_PRUEBA, rol=Rol.PACIENTE)
         return Paciente.objects.create(
-            usuario=usuario, tipo_documento="CC", numero_documento=f"9{numero:08d}",
-            nombres=f"Paciente {numero}", apellidos="Prueba", telefono="3000000000",
+            usuario=usuario,
+            tipo_documento="CC",
+            numero_documento=f"9{numero:08d}",
+            nombres=f"Paciente {numero}",
+            apellidos="Prueba",
+            telefono="3000000000",
         )
 
     return _crear

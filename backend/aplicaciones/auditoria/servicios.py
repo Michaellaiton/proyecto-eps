@@ -1,4 +1,5 @@
 """Registro de auditoría. Debe llamarse fuera de la transacción que falla, para que el registro no se revierta."""
+
 from .models import Auditoria
 
 

@@ -1,0 +1,159 @@
+/* Estilos base y fondo animado. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--fuente);
+  color: var(--texto);
+  background: var(--fondo);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: clamp(1.9rem, 4vw, 3rem);
+}
+
+h2 {
+  font-size: 1.35rem;
+}
+
+h3 {
+  font-size: 1.05rem;
+}
+
+p {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primario) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.texto-suave {
+  color: var(--texto-suave);
+}
+
+.solo-lectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* --- Fondo animado: manchas de color que se desplazan lentamente --- */
+.fondo-animado {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(17, 36, 29, 0.05) 1px, transparent 0) 0 0 / 28px 28px,
+    linear-gradient(160deg, #f4fbf8 0%, #e7f3ef 55%, #e9f0fb 100%);
+}
+
+.fondo-animado__mancha {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.55;
+  animation: flotar 24s ease-in-out infinite alternate;
+}
+
+.fondo-animado__mancha:nth-child(1) {
+  width: 46vmax;
+  height: 46vmax;
+  top: -14vmax;
+  left: -10vmax;
+  background: #8fe0c4;
+}
+
+.fondo-animado__mancha:nth-child(2) {
+  width: 38vmax;
+  height: 38vmax;
+  bottom: -16vmax;
+  right: -8vmax;
+  background: #9cc4f5;
+  animation-duration: 30s;
+  animation-delay: -8s;
+}
+
+.fondo-animado__mancha:nth-child(3) {
+  width: 26vmax;
+  height: 26vmax;
+  top: 40%;
+  left: 45%;
+  background: #c7f0dc;
+  animation-duration: 36s;
+  animation-delay: -16s;
+}
+
+@keyframes flotar {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(6vmax, 4vmax) scale(1.08);
+  }
+  100% {
+    transform: translate(-4vmax, 7vmax) scale(0.94);
+  }
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.aparecer {
+  animation: aparecer var(--normal) var(--curva) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

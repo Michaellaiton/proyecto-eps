@@ -1,4 +1,5 @@
 """Pruebas del bloqueo temporal tras intentos fallidos de inicio de sesión (riesgo R5, REQ-07)."""
+
 import pytest
 from rest_framework.test import APIClient
 

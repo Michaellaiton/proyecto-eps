@@ -1,4 +1,5 @@
 """Registro de auditoría de operaciones, incluidos los intentos denegados (no repudio)."""
+
 from django.conf import settings
 from django.db import models
 

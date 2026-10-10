@@ -1,4 +1,5 @@
 """Pruebas del módulo de administración (rol ADMIN). Requieren PostgreSQL."""
+
 from datetime import time, timedelta
 
 import pytest
@@ -18,14 +19,20 @@ CLAVE_NUEVA = "Clave-Nueva-Segura-2026"
 
 def _datos_paciente(**cambios):
     datos = {
-        "username": "nuevo_paciente", "password": CLAVE_NUEVA, "rol": "PACIENTE",
-        "nombres": "María", "apellidos": "López", "tipo_documento": "CC",
-        "numero_documento": "123456789", "telefono": "3001234567",
+        "username": "nuevo_paciente",
+        "password": CLAVE_NUEVA,
+        "rol": "PACIENTE",
+        "nombres": "María",
+        "apellidos": "López",
+        "tipo_documento": "CC",
+        "numero_documento": "123456789",
+        "telefono": "3001234567",
     }
     return {**datos, **cambios}
 
 
 # --- Control de acceso ---
+
 
 @pytest.mark.parametrize("ruta", ["/resumen/", "/usuarios/", "/especialidades/", "/citas/", "/auditoria/"])
 def prueba_paciente_no_accede_al_modulo_de_administracion(ruta, crear_paciente, cliente_de):
@@ -37,6 +44,7 @@ def prueba_sin_token_responde_401():
 
 
 # --- Usuarios ---
+
 
 def prueba_crear_paciente_crea_usuario_y_perfil(administrador, cliente_de):
     respuesta = cliente_de(administrador).post(URL + "/usuarios/", _datos_paciente(), format="json")
@@ -69,8 +77,13 @@ def prueba_crear_medico_exige_especialidad_y_registro(administrador, cliente_de)
 def prueba_crear_medico_valido(administrador, cliente_de):
     especialidad = Especialidad.objects.create(nombre="Cardiología")
     datos = {
-        "username": "medico_x", "password": CLAVE_NUEVA, "rol": "DOCTOR", "nombres": "Luis", "apellidos": "Paz",
-        "id_especialidad": especialidad.id_especialidad, "registro_medico": "RM-9999",
+        "username": "medico_x",
+        "password": CLAVE_NUEVA,
+        "rol": "DOCTOR",
+        "nombres": "Luis",
+        "apellidos": "Paz",
+        "id_especialidad": especialidad.id_especialidad,
+        "registro_medico": "RM-9999",
     }
 
     respuesta = cliente_de(administrador).post(URL + "/usuarios/", datos, format="json")
@@ -152,6 +165,7 @@ def prueba_restablecer_clave(administrador, crear_paciente, cliente_de):
 
 # --- Especialidades ---
 
+
 def prueba_crear_y_renombrar_especialidad(administrador, cliente_de):
     cliente = cliente_de(administrador)
 
@@ -179,6 +193,7 @@ def prueba_eliminar_especialidad_sin_medicos(administrador, cliente_de):
 
 # --- Horario base ---
 
+
 def prueba_reemplazar_horario_cambia_la_disponibilidad(administrador, doctor, crear_paciente, cliente_de):
     fecha = proximo_dia_habil()
     bloques = [{"dia_semana": fecha.weekday(), "hora_inicio": "14:00", "hora_fin": "15:00", "duracion_minutos": 30}]
@@ -186,9 +201,11 @@ def prueba_reemplazar_horario_cambia_la_disponibilidad(administrador, doctor, cr
     respuesta = cliente_de(administrador).put(
         f"{URL}/medicos/{doctor.id_doctor}/horario/", {"bloques": bloques}, format="json"
     )
-    franjas = cliente_de(crear_paciente(1).usuario).get(
-        f"/api/v1/medicos/{doctor.id_doctor}/disponibilidad/", {"fecha": fecha.isoformat()}
-    ).json()["franjas"]
+    franjas = (
+        cliente_de(crear_paciente(1).usuario)
+        .get(f"/api/v1/medicos/{doctor.id_doctor}/disponibilidad/", {"fecha": fecha.isoformat()})
+        .json()["franjas"]
+    )
 
     assert respuesta.status_code == 200
     assert franjas == ["14:00", "14:30"]
@@ -219,6 +236,7 @@ def prueba_bloque_con_hora_fin_anterior_se_rechaza(administrador, doctor, client
 
 
 # --- Citas, reporte y resumen ---
+
 
 def prueba_listado_de_citas_filtra_por_estado(administrador, doctor, crear_paciente, cliente_de):
     fecha = proximo_dia_habil()
@@ -253,9 +271,11 @@ def prueba_reporte_de_ocupacion(administrador, doctor, crear_paciente, cliente_d
         paciente=crear_paciente(3), doctor=doctor, fecha=fecha, hora=time(7, 40), estado=EstadoCita.CANCELADA
     )
 
-    reporte = cliente_de(administrador).get(
-        URL + "/reportes/ocupacion/", {"desde": fecha.isoformat(), "hasta": fecha.isoformat()}
-    ).json()
+    reporte = (
+        cliente_de(administrador)
+        .get(URL + "/reportes/ocupacion/", {"desde": fecha.isoformat(), "hasta": fecha.isoformat()})
+        .json()
+    )
     fila = reporte["medicos"][0]
 
     assert fila["franjas_ofertadas"] == 15

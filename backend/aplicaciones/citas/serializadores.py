@@ -1,4 +1,5 @@
 """Serializadores de citas: entrada de la reserva y forma del JSON de salida."""
+
 from rest_framework import serializers
 
 from .models import Cita, EstadoCita

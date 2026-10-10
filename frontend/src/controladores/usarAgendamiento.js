@@ -1,15 +1,18 @@
-// Controlador del flujo de agendamiento (CU-01 y CU-02):
-// especialidad → médico → fecha → franja → confirmación.
+// Controlador del flujo de agendamiento (CU-01 y CU-02), tal como el diagrama de flujo del informe:
+// especialidad → médico → fecha → disponibilidad → franja → confirmación.
 import { useEffect, useState } from 'react'
 
 import { agendarCita } from '../servicios/citasServicio.js'
 import { consultarDisponibilidad, listarDoctores, listarEspecialidades } from '../servicios/medicosServicio.js'
+import { hoyIso } from '../utilidades/fechas.js'
+
+const SELECCION_INICIAL = { idEspecialidad: '', idDoctor: '', fecha: hoyIso(), hora: '' }
 
 export function usarAgendamiento() {
-  const [especialidades, setEspecialidades] = useState([])
-  const [doctores, setDoctores] = useState([])
+  const [especialidades, setEspecialidades] = useState(null)
+  const [doctores, setDoctores] = useState(null)
   const [franjas, setFranjas] = useState(null)
-  const [seleccion, setSeleccion] = useState({ idEspecialidad: '', idDoctor: '', fecha: '', hora: '' })
+  const [seleccion, setSeleccion] = useState(SELECCION_INICIAL)
   const [citaConfirmada, setCitaConfirmada] = useState(null)
   const [sugerencia, setSugerencia] = useState(null)
   const [error, setError] = useState(null)
@@ -20,15 +23,22 @@ export function usarAgendamiento() {
   }, [])
 
   useEffect(() => {
-    setDoctores([])
+    setDoctores(null)
     if (seleccion.idEspecialidad) listarDoctores(seleccion.idEspecialidad).then(setDoctores).catch(setError)
   }, [seleccion.idEspecialidad])
 
-  function limpiarMensajes() {
-    setCitaConfirmada(null)
-    setSugerencia(null)
-    setError(null)
-  }
+  // La disponibilidad se consulta sola al elegir médico y día.
+  useEffect(() => {
+    setFranjas(null)
+    if (!seleccion.idDoctor || !seleccion.fecha) return
+    let vigente = true
+    consultarDisponibilidad(seleccion.idDoctor, seleccion.fecha)
+      .then((r) => vigente && setFranjas(r.franjas))
+      .catch((e) => vigente && setError(e))
+    return () => {
+      vigente = false
+    }
+  }, [seleccion.idDoctor, seleccion.fecha])
 
   function elegir(campo, valor) {
     const dependientes = {
@@ -38,53 +48,44 @@ export function usarAgendamiento() {
       hora: {},
     }
     setSeleccion((anterior) => ({ ...anterior, [campo]: valor, ...dependientes[campo] }))
-    if (campo !== 'hora') setFranjas(null)
-    limpiarMensajes()
-  }
-
-  async function cargarFranjas(idDoctor, fecha) {
-    const respuesta = await consultarDisponibilidad(idDoctor, fecha)
-    setFranjas(respuesta.franjas)
-  }
-
-  async function consultar() {
-    setOcupado(true)
-    limpiarMensajes()
-    try {
-      await cargarFranjas(seleccion.idDoctor, seleccion.fecha)
-    } catch (e) {
-      setError(e)
-    } finally {
-      setOcupado(false)
-    }
+    setSugerencia(null)
+    setError(null)
   }
 
   async function reservar(idDoctor, fecha, hora) {
     setOcupado(true)
-    limpiarMensajes()
+    setError(null)
+    setSugerencia(null)
     try {
-      const cita = await agendarCita(Number(idDoctor), fecha, hora)
-      setCitaConfirmada(cita)
-      setSeleccion((anterior) => ({ ...anterior, fecha, hora: '' }))
-      await cargarFranjas(idDoctor, fecha)
+      setCitaConfirmada(await agendarCita(Number(idDoctor), fecha, hora))
     } catch (e) {
       setError(e)
       // Si otro paciente tomó la franja (409), se refresca la disponibilidad y se ofrece la siguiente libre.
       if (e.estado === 409) {
         setSugerencia(e.datos?.sugerencia ?? null)
         setSeleccion((anterior) => ({ ...anterior, hora: '' }))
-        await cargarFranjas(idDoctor, fecha).catch(() => {})
+        consultarDisponibilidad(idDoctor, fecha).then((r) => setFranjas(r.franjas)).catch(() => {})
       }
     } finally {
       setOcupado(false)
     }
   }
 
-  const confirmar = () => reservar(seleccion.idDoctor, seleccion.fecha, seleccion.hora)
-  const aceptarSugerencia = (s) => reservar(s.id_doctor, s.fecha, s.hora)
+  function reiniciar() {
+    setSeleccion(SELECCION_INICIAL)
+    setCitaConfirmada(null)
+    setSugerencia(null)
+    setError(null)
+  }
+
+  const pasoActual = !seleccion.idEspecialidad ? 0 : !seleccion.idDoctor ? 1 : !seleccion.hora ? 2 : 3
+  const especialidad = especialidades?.find((e) => String(e.id_especialidad) === seleccion.idEspecialidad)
+  const doctor = doctores?.find((d) => String(d.id_doctor) === seleccion.idDoctor)
 
   return {
-    especialidades, doctores, franjas, seleccion, elegir, consultar, confirmar,
-    citaConfirmada, sugerencia, aceptarSugerencia, error, ocupado,
+    especialidades, doctores, franjas, seleccion, elegir, pasoActual, especialidad, doctor,
+    confirmar: () => reservar(seleccion.idDoctor, seleccion.fecha, seleccion.hora),
+    aceptarSugerencia: (s) => reservar(s.id_doctor, s.fecha, s.hora),
+    citaConfirmada, sugerencia, error, ocupado, reiniciar,
   }
 }

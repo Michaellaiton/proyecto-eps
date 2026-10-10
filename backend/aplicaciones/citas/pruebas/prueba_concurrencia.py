@@ -2,6 +2,7 @@
 Prueba de concurrencia (REQ-03, OBS-01): N solicitudes simultáneas por la misma franja
 deben producir exactamente una cita. Usa hilos reales y conexiones independientes a PostgreSQL.
 """
+
 from concurrent.futures import ThreadPoolExecutor
 from datetime import time
 from threading import Barrier

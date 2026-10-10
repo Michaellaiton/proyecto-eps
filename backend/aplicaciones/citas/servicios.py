@@ -6,6 +6,7 @@ Protocolo de reserva contra el doble agendamiento (REQ-03, ADR-02):
   2. Revalidación de la franja con el bloqueo ya adquirido.
   3. Inserción; los índices únicos parciales son la última defensa.
 """
+
 from datetime import datetime, timedelta
 
 from django.conf import settings
@@ -81,8 +82,8 @@ def _reservar(paciente, doctor, fecha, hora):
     try:
         with transaction.atomic():
             return Cita.objects.create(paciente=paciente, doctor=doctor, fecha=fecha, hora=hora)
-    except IntegrityError:
-        raise FranjaNoDisponible("La franja ya fue asignada.")
+    except IntegrityError as error:
+        raise FranjaNoDisponible("La franja ya fue asignada.") from error
 
 
 def _con_sugerencia(error, id_doctor, fecha, hora):
@@ -108,7 +109,7 @@ def agendar_cita(usuario, id_doctor, fecha, hora):
     except Conflicto as error:
         auditoria.registrar(usuario, "AGENDAR", "citas", None, Resultado.CONFLICTO, _mensaje(error))
         if isinstance(error, FranjaNoDisponible):
-            raise _con_sugerencia(error, id_doctor, fecha, hora)
+            raise _con_sugerencia(error, id_doctor, fecha, hora) from error
         raise
 
 
@@ -190,7 +191,7 @@ def reprogramar_cita(usuario, id_cita, fecha, hora, id_doctor=None):
     except Conflicto as conflicto:
         auditoria.registrar(usuario, "REPROGRAMAR", "citas", id_cita, Resultado.CONFLICTO, _mensaje(conflicto))
         if isinstance(conflicto, FranjaNoDisponible):
-            raise _con_sugerencia(conflicto, id_doctor, fecha, hora)
+            raise _con_sugerencia(conflicto, id_doctor, fecha, hora) from conflicto
         raise
 
     resultado = Resultado.DENEGADO if isinstance(error, PermissionDenied) else Resultado.CONFLICTO
@@ -230,3 +231,32 @@ def registrar_atencion(usuario, id_cita, estado):
         auditoria.registrar(usuario, "REGISTRAR_ATENCION", "citas", id_cita, resultado, _mensaje(error))
         raise error
     return cita
+
+
+def enviar_recordatorios(ahora=None):
+    """
+    Envía el recordatorio a las citas agendadas que ocurren dentro de las próximas N horas y aún no lo
+    recibieron (mitigación del riesgo RSK-03: inasistencias por olvido). Es idempotente: se puede ejecutar
+    cada hora con el programador de tareas del sistema operativo. Devuelve cuántos recordatorios envió.
+    """
+    ahora = ahora or timezone.now()
+    limite = ahora + timedelta(hours=_parametro("HORAS_ANTICIPACION_RECORDATORIO"))
+    candidatas = Cita.objects.filter(
+        estado=EstadoCita.AGENDADA,
+        recordatorio_enviado_en__isnull=True,
+        fecha__gte=timezone.localdate(ahora),
+        fecha__lte=timezone.localdate(limite),
+    ).select_related("paciente__usuario", "doctor__especialidad")
+
+    enviados = 0
+    for cita in candidatas:
+        if not ahora < _momento(cita.fecha, cita.hora) <= limite:
+            continue
+        with transaction.atomic():
+            # Se vuelve a marcar con un UPDATE condicional por si dos ejecuciones coinciden.
+            if Cita.objects.filter(pk=cita.pk, recordatorio_enviado_en__isnull=True).update(
+                recordatorio_enviado_en=ahora
+            ):
+                notificaciones.recordatorio_de_cita(cita)
+                enviados += 1
+    return enviados

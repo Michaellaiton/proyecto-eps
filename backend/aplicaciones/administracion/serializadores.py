@@ -1,4 +1,5 @@
 """Serializadores del módulo de administración: usuarios, horarios, citas y auditoría."""
+
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
@@ -24,8 +25,16 @@ class UsuarioAdminSerializador(serializers.ModelSerializer):
     class Meta:
         model = Usuario
         fields = [
-            "id_usuario", "username", "email", "rol", "activo",
-            "nombres", "apellidos", "perfil", "ultimo_acceso", "fecha_registro",
+            "id_usuario",
+            "username",
+            "email",
+            "rol",
+            "activo",
+            "nombres",
+            "apellidos",
+            "perfil",
+            "ultimo_acceso",
+            "fecha_registro",
         ]
 
     def _perfil(self, usuario):
@@ -97,9 +106,12 @@ class CrearUsuarioSerializador(serializers.Serializer):
             nombres = ["id_especialidad" if c == "especialidad" else c for c in faltantes]
             raise serializers.ValidationError({c: "Obligatorio para este rol." for c in nombres})
 
-        if datos["rol"] == Rol.PACIENTE and Paciente.objects.filter(
-            tipo_documento=datos["tipo_documento"], numero_documento=datos["numero_documento"]
-        ).exists():
+        if (
+            datos["rol"] == Rol.PACIENTE
+            and Paciente.objects.filter(
+                tipo_documento=datos["tipo_documento"], numero_documento=datos["numero_documento"]
+            ).exists()
+        ):
             raise serializers.ValidationError({"numero_documento": "Ya existe un paciente con ese documento."})
         if datos["rol"] == Rol.DOCTOR and Doctor.objects.filter(registro_medico=datos["registro_medico"]).exists():
             raise serializers.ValidationError({"registro_medico": "Ya existe un médico con ese registro."})

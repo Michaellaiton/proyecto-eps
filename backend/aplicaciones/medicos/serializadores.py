@@ -1,4 +1,5 @@
 """Serializadores: definen cómo se presentan los modelos de médicos en JSON."""
+
 from rest_framework import serializers
 
 from .models import BloqueoAgenda, Doctor, Especialidad

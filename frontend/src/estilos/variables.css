@@ -1,0 +1,37 @@
+/* Tokens de diseño: colores, tipografía, radios, sombras y tiempos de animación. */
+:root {
+  --primario: #0f8a6a;
+  --primario-oscuro: #0a6650;
+  --primario-claro: #34b892;
+  --primario-suave: #e2f5ee;
+  --acento: #2f7de1;
+  --acento-suave: #e6f0fd;
+
+  --exito: #15924f;
+  --exito-suave: #e3f6ea;
+  --aviso: #b8730a;
+  --aviso-suave: #fff4df;
+  --peligro: #d33f49;
+  --peligro-suave: #fdeced;
+
+  --texto: #11241d;
+  --texto-suave: #586b64;
+  --texto-tenue: #8a9a94;
+  --fondo: #eef6f3;
+  --superficie: rgba(255, 255, 255, 0.82);
+  --superficie-solida: #ffffff;
+  --borde: rgba(17, 36, 29, 0.1);
+  --borde-fuerte: rgba(17, 36, 29, 0.18);
+
+  --radio-pequeno: 8px;
+  --radio: 14px;
+  --radio-grande: 22px;
+  --sombra-suave: 0 1px 2px rgba(17, 36, 29, 0.06), 0 4px 14px rgba(17, 36, 29, 0.06);
+  --sombra: 0 2px 6px rgba(17, 36, 29, 0.06), 0 12px 32px rgba(17, 36, 29, 0.1);
+  --sombra-flotante: 0 18px 50px rgba(10, 102, 80, 0.25);
+
+  --fuente: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --rapido: 150ms;
+  --normal: 260ms;
+  --curva: cubic-bezier(0.2, 0.8, 0.2, 1);
+}

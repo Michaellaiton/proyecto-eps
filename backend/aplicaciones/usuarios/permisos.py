@@ -1,4 +1,5 @@
 """Permisos por rol (control de acceso basado en roles, REQ-07)."""
+
 from rest_framework.permissions import BasePermission
 
 from .models import Rol

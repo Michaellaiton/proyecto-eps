@@ -2,6 +2,7 @@
 Pruebas de la API del flujo del paciente contra PostgreSQL real.
 Los identificadores CP-* siguen la numeración del informe de Calidad de Software (Anexo B).
 """
+
 from datetime import time, timedelta
 
 import pytest
@@ -28,6 +29,7 @@ def _agendar(cliente, doctor, fecha, hora="08:00"):
 
 # --- Autenticación (REQ-07) ---
 
+
 def prueba_CP_A01_inicio_de_sesion_devuelve_token_y_rol(crear_paciente):
     crear_paciente(1)
 
@@ -51,10 +53,11 @@ def prueba_CP_A02_credenciales_incorrectas_responden_401(crear_paciente):
 
 
 def prueba_CP_A03_sin_token_responde_401(doctor):
-    assert APIClient().get("/api/v1/medicos/especialidades/").status_code == 401
+    assert APIClient().get("/api/v1/medicos/").status_code == 401
 
 
 # --- CU-01 Consultar disponibilidad (REQ-01) ---
+
 
 def prueba_CP_CU01_01_disponibilidad_en_dia_habil(doctor, crear_paciente, cliente_de):
     cliente = cliente_de(crear_paciente(1).usuario)
@@ -89,7 +92,9 @@ def prueba_CP_CU01_04_fecha_malformada_422(doctor, crear_paciente, cliente_de):
 
 def prueba_CP_CU04_01_bloqueo_excluye_franjas_de_la_disponibilidad(doctor, crear_paciente, cliente_de):
     fecha = proximo_dia_habil()
-    BloqueoAgenda.objects.create(doctor=doctor, fecha=fecha, hora_inicio=time(7, 0), hora_fin=time(8, 0), motivo="Junta")
+    BloqueoAgenda.objects.create(
+        doctor=doctor, fecha=fecha, hora_inicio=time(7, 0), hora_fin=time(8, 0), motivo="Junta"
+    )
     cliente = cliente_de(crear_paciente(1).usuario)
 
     franjas = _disponibilidad(cliente, doctor, fecha).json()["franjas"]
@@ -99,6 +104,7 @@ def prueba_CP_CU04_01_bloqueo_excluye_franjas_de_la_disponibilidad(doctor, crear
 
 
 # --- CU-02 Agendar cita (REQ-02, REQ-03) ---
+
 
 def prueba_CP_CU02_01_agendar_franja_libre_201(doctor, crear_paciente, cliente_de):
     cliente = cliente_de(crear_paciente(1).usuario)
@@ -150,6 +156,7 @@ def prueba_CP_CU02_08_limite_de_citas_activas(doctor, crear_paciente, cliente_de
 
 
 # --- CU-03 Cancelar cita (REQ-04, REQ-07) ---
+
 
 def prueba_CP_CU03_01_cancelar_libera_la_franja(doctor, crear_paciente, cliente_de):
     fecha = proximo_dia_habil()

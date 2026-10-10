@@ -1,4 +1,5 @@
 """Modelo de pacientes afiliados. Solo datos de contacto e identificación (minimización, Ley 1581 de 2012)."""
+
 from django.conf import settings
 from django.db import models
 

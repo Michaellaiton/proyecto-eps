@@ -1,12 +1,17 @@
 """
-Protección del inicio de sesión contra fuerza bruta (riesgo R5 del informe de Calidad).
+Servicios de usuarios: protección del inicio de sesión contra fuerza bruta (riesgo R5) y perfil propio.
 
 Se cuentan los intentos fallidos por nombre de usuario. Al llegar al máximo, la cuenta queda bloqueada
 durante unos minutos y la API responde 429. El contador vive en la caché de Django: en un despliegue con
 varios procesos debe configurarse una caché compartida (por ejemplo Redis) para que el límite sea global.
 """
+
 from django.conf import settings
 from django.core.cache import cache
+from django.db import transaction
+
+from aplicaciones.auditoria import servicios as auditoria
+from aplicaciones.notificaciones import servicios as notificaciones
 
 
 def _clave(nombre_usuario):
@@ -35,3 +40,26 @@ def limpiar_intentos(nombre_usuario):
 
 def segundos_de_bloqueo():
     return _parametro("MINUTOS_BLOQUEO_SESION") * 60
+
+
+# --- Perfil del usuario autenticado ---
+
+
+@transaction.atomic
+def actualizar_perfil(usuario, datos):
+    if "email" in datos:
+        usuario.email = datos["email"]
+        usuario.save(update_fields=["email"])
+    paciente = getattr(usuario, "paciente", None)
+    if paciente and "telefono" in datos:
+        paciente.telefono = datos["telefono"]
+        paciente.save(update_fields=["telefono"])
+    auditoria.registrar(usuario, "ACTUALIZAR_PERFIL", "usuarios", usuario.id_usuario, detalle=", ".join(sorted(datos)))
+    return usuario
+
+
+def cambiar_clave(usuario, clave_nueva):
+    usuario.set_password(clave_nueva)
+    usuario.save(update_fields=["password"])
+    auditoria.registrar(usuario, "CAMBIAR_CLAVE", "usuarios", usuario.id_usuario)
+    notificaciones.clave_cambiada(usuario)

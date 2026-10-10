@@ -1,4 +1,5 @@
 """Pruebas de las reglas de integridad de la tabla citas (REQ-03 y REQ-04). Requieren PostgreSQL."""
+
 from datetime import time
 
 import pytest
@@ -22,9 +23,7 @@ def prueba_indice_unico_rechaza_dos_citas_activas_en_la_misma_franja(doctor, cre
 @pytest.mark.django_db
 def prueba_indice_parcial_permite_reutilizar_franja_cancelada(doctor, crear_paciente):
     fecha = proximo_dia_habil()
-    Cita.objects.create(
-        paciente=crear_paciente(1), doctor=doctor, fecha=fecha, hora=HORA, estado=EstadoCita.CANCELADA
-    )
+    Cita.objects.create(paciente=crear_paciente(1), doctor=doctor, fecha=fecha, hora=HORA, estado=EstadoCita.CANCELADA)
 
     cita = Cita.objects.create(paciente=crear_paciente(2), doctor=doctor, fecha=fecha, hora=HORA)
 

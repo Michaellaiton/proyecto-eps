@@ -1,4 +1,5 @@
 """Modelo de usuarios: credenciales y rol, separados de los datos del paciente y del médico."""
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 

@@ -1,12 +1,19 @@
-// Panel para reprogramar una cita: mismo médico u otro de la misma especialidad (CU-03, REQ-04).
+// Ventana para reprogramar una cita: mismo médico u otro de la misma especialidad (CU-03, REQ-04).
 import { useEffect, useState } from 'react'
+import { CalendarSearch, Repeat, UserRound } from 'lucide-react'
 
-import CampoSeleccion from '../componentes/CampoSeleccion.jsx'
+import Avatar from '../componentes/Avatar.jsx'
+import Boton from '../componentes/Boton.jsx'
+import Dialogo from '../componentes/Dialogo.jsx'
+import { Cargando, Vacio } from '../componentes/Estados.jsx'
 import MensajeError from '../componentes/MensajeError.jsx'
+import SelectorDias from '../componentes/SelectorDias.jsx'
+import SelectorFranjas from '../componentes/SelectorFranjas.jsx'
+import SelectorTarjetas from '../componentes/SelectorTarjetas.jsx'
 import SugerenciaFranja from '../componentes/SugerenciaFranja.jsx'
 import { reprogramarCita } from '../servicios/citasServicio.js'
 import { consultarDisponibilidad, listarDoctores } from '../servicios/medicosServicio.js'
-import { formatearFecha, hoyIso } from '../utilidades/fechas.js'
+import { formatearFecha } from '../utilidades/fechas.js'
 
 export default function PanelReprogramar({ cita, alTerminar, alCerrar }) {
   const [doctores, setDoctores] = useState([])
@@ -26,7 +33,6 @@ export default function PanelReprogramar({ cita, alTerminar, alCerrar }) {
     setFranjas(null)
     setHora('')
     setSugerencia(null)
-    if (!idDoctor || !fecha) return
     consultarDisponibilidad(idDoctor, fecha).then((r) => setFranjas(r.franjas)).catch(setError)
   }, [idDoctor, fecha])
 
@@ -35,8 +41,7 @@ export default function PanelReprogramar({ cita, alTerminar, alCerrar }) {
     setError(null)
     setSugerencia(null)
     try {
-      const nueva = await reprogramarCita(cita.id_cita, destino)
-      alTerminar(nueva)
+      alTerminar(await reprogramarCita(cita.id_cita, destino))
     } catch (e) {
       setError(e)
       if (e.estado === 409) setSugerencia(e.datos?.sugerencia ?? null)
@@ -45,43 +50,39 @@ export default function PanelReprogramar({ cita, alTerminar, alCerrar }) {
   }
 
   return (
-    <div className="tarjeta tarjeta--resaltada">
-      <h3>Reprogramar cita</h3>
-      <p className="subtitulo">
-        Actual: {cita.especialidad} con {cita.doctor}, {formatearFecha(cita.fecha)} a las {cita.hora}.
+    <Dialogo titulo="Reprogramar cita" alCerrar={alCerrar} ancho>
+      <div className="tarjeta__titulo">
+        <Repeat size={22} />
+        <h2>Reprogramar</h2>
+      </div>
+      <p className="texto-suave">
+        Actual: {formatearFecha(cita.fecha)} · {cita.hora} con {cita.doctor}
       </p>
 
-      <div className="rejilla">
-        <CampoSeleccion
-          id="reprogramar-doctor"
-          etiqueta="Médico"
-          valor={idDoctor}
-          alCambiar={setIdDoctor}
-          textoVacio="Seleccione un médico"
-          opciones={doctores.map((d) => ({ valor: String(d.id_doctor), texto: `${d.nombres} ${d.apellidos}` }))}
-        />
-        <div className="campo">
-          <label htmlFor="reprogramar-fecha">Nueva fecha</label>
-          <input id="reprogramar-fecha" type="date" min={hoyIso()} value={fecha} onChange={(e) => setFecha(e.target.value)} />
+      {doctores.length > 1 && (
+        <div className="grupo-franjas">
+          <span className="grupo-franjas__titulo">
+            <UserRound size={16} /> Médico
+          </span>
+          <SelectorTarjetas
+            etiqueta="Médico"
+            valor={idDoctor}
+            alElegir={setIdDoctor}
+            opciones={doctores.map((d) => {
+              const nombre = `${d.nombres} ${d.apellidos}`
+              return { valor: d.id_doctor, titulo: nombre, figura: <Avatar nombre={nombre} /> }
+            })}
+          />
         </div>
-      </div>
+      )}
 
-      {franjas && (
-        <fieldset className="franjas">
-          <legend>Franjas disponibles el {formatearFecha(fecha)}</legend>
-          {franjas.length === 0 && <p>No hay franjas disponibles para esta fecha.</p>}
-          {franjas.map((h) => (
-            <button
-              key={h}
-              type="button"
-              className={`franja ${hora === h ? 'franja--elegida' : ''}`}
-              aria-pressed={hora === h}
-              onClick={() => setHora(h)}
-            >
-              {h}
-            </button>
-          ))}
-        </fieldset>
+      <SelectorDias valor={fecha} alElegir={setFecha} />
+      {franjas === null ? (
+        <Cargando texto="Buscando horarios…" />
+      ) : franjas.length === 0 ? (
+        <Vacio icono={CalendarSearch}>Sin horarios libres este día.</Vacio>
+      ) : (
+        <SelectorFranjas franjas={franjas} valor={hora} alElegir={setHora} />
       )}
 
       <MensajeError error={error} />
@@ -92,13 +93,13 @@ export default function PanelReprogramar({ cita, alTerminar, alCerrar }) {
       />
 
       <div className="acciones">
-        <button type="button" className="boton" disabled={!hora || ocupado} onClick={() => confirmar({ fecha, hora, idDoctor })}>
-          {hora ? `Mover la cita a las ${hora}` : 'Elija una franja'}
-        </button>
-        <button type="button" className="boton boton--secundario" onClick={alCerrar}>
+        <Boton icono={Repeat} disabled={!hora} cargando={ocupado} onClick={() => confirmar({ fecha, hora, idDoctor })}>
+          {hora ? `Mover a las ${hora}` : 'Elige una hora'}
+        </Boton>
+        <Boton variante="fantasma" onClick={alCerrar}>
           Cancelar
-        </button>
+        </Boton>
       </div>
-    </div>
+    </Dialogo>
   )
 }

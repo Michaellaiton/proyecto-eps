@@ -1,5 +1,5 @@
 // Llamadas a la API del módulo de administración (rol ADMIN).
-import { construirConsulta, solicitarApi } from './clienteApi.js'
+import { construirConsulta, descargarArchivo, solicitarApi } from './clienteApi.js'
 
 const BASE = '/administracion'
 
@@ -30,3 +30,8 @@ export const listarCitasAdmin = (filtros) => solicitarApi(`${BASE}/citas/${const
 export const consultarReporteOcupacion = (desde, hasta) =>
   solicitarApi(`${BASE}/reportes/ocupacion/${construirConsulta({ desde, hasta })}`)
 export const listarAuditoria = (filtros) => solicitarApi(`${BASE}/auditoria/${construirConsulta(filtros)}`)
+
+// Exportaciones CSV
+export const exportarOcupacion = (desde, hasta) =>
+  descargarArchivo(`${BASE}/reportes/ocupacion/exportar/${construirConsulta({ desde, hasta })}`, 'ocupacion.csv')
+export const exportarCitas = (filtros) => descargarArchivo(`${BASE}/citas/exportar/${construirConsulta(filtros)}`, 'citas.csv')

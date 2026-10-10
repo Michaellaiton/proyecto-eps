@@ -1,4 +1,5 @@
 """Pruebas de reprogramación (CU-03, REQ-04) y de la sugerencia de franja ante un 409 (Tabla 29 del informe)."""
+
 from datetime import time, timedelta
 
 import pytest
@@ -36,6 +37,7 @@ def cita(doctor, crear_paciente):
 
 
 # --- Reprogramar ---
+
 
 def prueba_reprogramar_cancela_la_original_y_crea_la_nueva(cita, cliente_de):
     respuesta = _reprogramar(cliente_de(cita.paciente.usuario), cita.id_cita, cita.fecha, "09:00")
@@ -115,6 +117,7 @@ def prueba_reprogramacion_tardia_422(doctor, crear_paciente, cliente_de):
 
 # --- Sugerencia al agendar ---
 
+
 def prueba_agendar_franja_ocupada_sugiere_la_siguiente_libre(cita, crear_paciente, cliente_de):
     respuesta = cliente_de(crear_paciente(2).usuario).post(
         "/api/v1/citas/", {"id_doctor": cita.doctor_id, "fecha": cita.fecha.isoformat(), "hora": "08:00"}, format="json"
@@ -123,7 +126,9 @@ def prueba_agendar_franja_ocupada_sugiere_la_siguiente_libre(cita, crear_pacient
     assert respuesta.status_code == 409
     assert respuesta.json()["detail"] == "La franja ya fue asignada."
     assert respuesta.json()["sugerencia"] == {
-        "id_doctor": str(cita.doctor_id), "fecha": cita.fecha.isoformat(), "hora": "08:20",
+        "id_doctor": str(cita.doctor_id),
+        "fecha": cita.fecha.isoformat(),
+        "hora": "08:20",
     }
 
 
@@ -144,7 +149,9 @@ def prueba_limite_de_citas_no_ofrece_sugerencia(doctor, crear_paciente, cliente_
     settings.EPS_PARAMETROS = {**settings.EPS_PARAMETROS, "MAXIMO_CITAS_ACTIVAS_PACIENTE": 1}
     cliente = cliente_de(crear_paciente(1).usuario)
     fecha = proximo_dia_habil()
-    cliente.post("/api/v1/citas/", {"id_doctor": doctor.id_doctor, "fecha": fecha.isoformat(), "hora": "07:00"}, format="json")
+    cliente.post(
+        "/api/v1/citas/", {"id_doctor": doctor.id_doctor, "fecha": fecha.isoformat(), "hora": "07:00"}, format="json"
+    )
 
     respuesta = cliente.post(
         "/api/v1/citas/", {"id_doctor": doctor.id_doctor, "fecha": fecha.isoformat(), "hora": "07:20"}, format="json"

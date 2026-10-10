@@ -10,3 +10,14 @@ export function iniciarSesion(nombreUsuario, contrasena) {
 export function consultarUsuarioActual() {
   return solicitarApi('/usuarios/yo/')
 }
+
+export function actualizarPerfil(cambios) {
+  return solicitarApi('/usuarios/yo/', { method: 'PATCH', cuerpo: cambios })
+}
+
+export function cambiarClave(claveActual, claveNueva) {
+  return solicitarApi('/usuarios/cambiar-clave/', {
+    method: 'POST',
+    cuerpo: { clave_actual: claveActual, clave_nueva: claveNueva },
+  })
+}

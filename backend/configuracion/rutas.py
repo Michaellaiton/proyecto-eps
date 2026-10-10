@@ -1,4 +1,5 @@
 """Rutas principales del backend. Cada aplicación expone sus rutas bajo /api/v1/."""
+
 from django.contrib import admin
 from django.urls import include, path
 
@@ -11,4 +12,7 @@ urlpatterns = [
     path("api/v1/medicos/", include("aplicaciones.medicos.rutas")),
     path("api/v1/citas/", include("aplicaciones.citas.rutas")),
     path("api/v1/administracion/", include("aplicaciones.administracion.rutas")),
+    path("api/v1/asistente/", include("aplicaciones.asistente.rutas")),
+    path("api/v1/notificaciones/", include("aplicaciones.notificaciones.rutas")),
+    path("api/v1/simulacion/", include("aplicaciones.simulacion.rutas")),
 ]

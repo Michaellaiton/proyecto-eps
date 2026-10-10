@@ -1,0 +1,14 @@
+# Análisis estático (REQ-08: 0 hallazgos). Ejecutar desde backend/:  ruff check .
+line-length = 120
+target-version = "py312"
+extend-exclude = ["aplicaciones/*/migrations"]
+
+[lint]
+# E/W estilo, F errores comunes, I orden de importaciones, B errores probables, UP sintaxis moderna, C90 complejidad.
+select = ["E", "W", "F", "I", "B", "UP", "C90"]
+
+[lint.mccabe]
+max-complexity = 10
+
+[lint.isort]
+known-first-party = ["aplicaciones", "configuracion", "conftest"]

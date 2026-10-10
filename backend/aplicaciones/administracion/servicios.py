@@ -2,6 +2,7 @@
 Reglas de negocio del rol ADMIN (superadministrador): gestión de usuarios, horarios,
 panel de resumen y reporte de ocupación (CU-05).
 """
+
 from collections import Counter, defaultdict
 from datetime import timedelta
 from itertools import pairwise
@@ -16,8 +17,10 @@ from aplicaciones.auditoria.servicios import Resultado
 from aplicaciones.citas.models import Cita, EstadoCita
 from aplicaciones.medicos.models import DiaSemana, Doctor, Especialidad, HorarioBase
 from aplicaciones.medicos.servicios import generar_franjas
+from aplicaciones.notificaciones import servicios as notificaciones
 from aplicaciones.pacientes.models import Paciente
 from aplicaciones.usuarios.models import Rol, Usuario
+from configuracion.bd import alias_lectura
 from configuracion.excepciones import Conflicto, ReglaInvalida
 
 MAXIMO_DIAS_REPORTE = 366
@@ -64,43 +67,48 @@ def crear_usuario(administrador, datos):
     return usuario
 
 
+def _actualizar_cuenta(usuario, datos):
+    for campo_api, campo_modelo in (
+        ("email", "email"),
+        ("activo", "is_active"),
+        ("nombres", "first_name"),
+        ("apellidos", "last_name"),
+    ):
+        if campo_api in datos:
+            setattr(usuario, campo_modelo, datos[campo_api])
+    usuario.save()
+
+
+def _actualizar_perfil(perfil, datos):
+    campos = {"nombres", "apellidos"}
+    if isinstance(perfil, Paciente):
+        campos.add("telefono")
+    if isinstance(perfil, Doctor):
+        campos |= {"especialidad", "registro_medico"}
+        if "activo" in datos:
+            perfil.activo = datos["activo"]  # Un médico desactivado deja de ofrecer franjas.
+    for campo in campos & datos.keys():
+        setattr(perfil, campo, datos[campo])
+    perfil.save()
+
+
 @transaction.atomic
 def actualizar_usuario(administrador, usuario, datos):
     if usuario == administrador and datos.get("activo") is False:
         raise Conflicto("No puede desactivar su propia cuenta.")
 
     perfil = _perfil(usuario)
-    if "registro_medico" in datos and isinstance(perfil, Doctor):
+    if isinstance(perfil, Doctor) and "registro_medico" in datos:
         if Doctor.objects.filter(registro_medico=datos["registro_medico"]).exclude(pk=perfil.pk).exists():
             raise Conflicto("Ya existe un médico con ese registro.")
 
-    if "email" in datos:
-        usuario.email = datos["email"]
-    if "activo" in datos:
-        usuario.is_active = datos["activo"]
-    if "nombres" in datos:
-        usuario.first_name = datos["nombres"]
-    if "apellidos" in datos:
-        usuario.last_name = datos["apellidos"]
-    usuario.save()
-
+    _actualizar_cuenta(usuario, datos)
     if perfil:
-        for campo in ("nombres", "apellidos"):
-            if campo in datos:
-                setattr(perfil, campo, datos[campo])
-        if isinstance(perfil, Paciente) and "telefono" in datos:
-            perfil.telefono = datos["telefono"]
-        if isinstance(perfil, Doctor):
-            if "especialidad" in datos:
-                perfil.especialidad = datos["especialidad"]
-            if "registro_medico" in datos:
-                perfil.registro_medico = datos["registro_medico"]
-            if "activo" in datos:
-                perfil.activo = datos["activo"]  # Un médico desactivado deja de ofrecer franjas.
-        perfil.save()
+        _actualizar_perfil(perfil, datos)
 
-    cambios = ", ".join(sorted(datos))
-    auditoria.registrar(administrador, "ACTUALIZAR_USUARIO", "usuarios", usuario.id_usuario, detalle=cambios)
+    auditoria.registrar(
+        administrador, "ACTUALIZAR_USUARIO", "usuarios", usuario.id_usuario, detalle=", ".join(sorted(datos))
+    )
     return usuario
 
 
@@ -108,6 +116,7 @@ def restablecer_clave(administrador, usuario, nueva_clave):
     usuario.set_password(nueva_clave)
     usuario.save(update_fields=["password"])
     auditoria.registrar(administrador, "RESTABLECER_CLAVE", "usuarios", usuario.id_usuario)
+    notificaciones.clave_cambiada(usuario, por_administrador=True)
 
 
 # --- Horario base de los médicos ---
@@ -139,8 +148,12 @@ def reemplazar_horario(administrador, doctor, bloques):
 def eliminar_especialidad(administrador, especialidad):
     if especialidad.doctores.exists():
         auditoria.registrar(
-            administrador, "ELIMINAR_ESPECIALIDAD", "especialidades", especialidad.id_especialidad,
-            Resultado.CONFLICTO, "Tiene médicos asociados",
+            administrador,
+            "ELIMINAR_ESPECIALIDAD",
+            "especialidades",
+            especialidad.id_especialidad,
+            Resultado.CONFLICTO,
+            "Tiene médicos asociados",
         )
         raise Conflicto("No se puede eliminar: hay médicos con esta especialidad.")
     identificador = especialidad.id_especialidad
@@ -183,10 +196,12 @@ def reporte_ocupacion(desde, hasta):
     if (hasta - desde).days >= MAXIMO_DIAS_REPORTE:
         raise ReglaInvalida(f"El rango máximo del reporte es de {MAXIMO_DIAS_REPORTE} días.")
 
+    bd = alias_lectura()  # Reporte pesado: se lee de la réplica si existe.
     dias_del_rango = Counter((desde + timedelta(days=n)).weekday() for n in range((hasta - desde).days + 1))
     conteos = {
         fila["doctor"]: fila
-        for fila in Cita.objects.filter(fecha__range=(desde, hasta))
+        for fila in Cita.objects.using(bd)
+        .filter(fecha__range=(desde, hasta))
         .values("doctor")
         .annotate(
             agendadas=Count("id_cita", filter=Q(estado=EstadoCita.AGENDADA)),
@@ -197,7 +212,7 @@ def reporte_ocupacion(desde, hasta):
     }
 
     filas = []
-    for doctor in Doctor.objects.select_related("especialidad").prefetch_related("horarios"):
+    for doctor in Doctor.objects.using(bd).select_related("especialidad").prefetch_related("horarios"):
         franjas_por_dia = defaultdict(int)
         for horario in doctor.horarios.all():
             franjas_por_dia[horario.dia_semana] += len(
@@ -233,3 +248,29 @@ def reporte_ocupacion(desde, hasta):
         round(100 * ocupadas_total / totales["franjas_ofertadas"], 1) if totales["franjas_ofertadas"] else 0.0
     )
     return {"desde": desde, "hasta": hasta, "medicos": filas, "totales": totales}
+
+
+# --- Consulta de citas (listado y exportación) ---
+
+MAXIMO_FILAS_EXPORTACION = 10000
+
+
+def filtrar_citas(parametros, bd="default"):
+    """Citas con los filtros del panel: desde, hasta, id_doctor, estado y buscar (nombre o documento del paciente)."""
+    citas = Cita.objects.using(bd).select_related("doctor__especialidad", "paciente").order_by("-fecha", "-hora")
+    if parametros.get("desde"):
+        citas = citas.filter(fecha__gte=parametros["desde"])
+    if parametros.get("hasta"):
+        citas = citas.filter(fecha__lte=parametros["hasta"])
+    if str(parametros.get("id_doctor", "")).isdigit():
+        citas = citas.filter(doctor_id=parametros["id_doctor"])
+    if parametros.get("estado"):
+        citas = citas.filter(estado=parametros["estado"])
+    if parametros.get("buscar"):
+        texto = parametros["buscar"].strip()
+        citas = citas.filter(
+            Q(paciente__numero_documento__icontains=texto)
+            | Q(paciente__nombres__icontains=texto)
+            | Q(paciente__apellidos__icontains=texto)
+        )
+    return citas

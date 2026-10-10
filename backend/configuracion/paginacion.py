@@ -1,4 +1,5 @@
 """Paginación para listados que pueden crecer mucho (citas, auditoría)."""
+
 from rest_framework.pagination import PageNumberPagination
 
 

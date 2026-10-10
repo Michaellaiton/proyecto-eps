@@ -4,6 +4,7 @@ Modelo de citas (agendamiento).
 Los índices únicos parciales garantizan una sola cita activa por franja de un médico y por
 paciente-hora, y permiten volver a reservar una franja cancelada sin borrar el histórico (REQ-03, REQ-04).
 """
+
 from django.db import models
 from django.db.models import Q
 
@@ -27,6 +28,8 @@ class Cita(models.Model):
     estado = models.CharField(max_length=12, choices=EstadoCita.choices, default=EstadoCita.AGENDADA)
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
+    # Marca del recordatorio enviado al paciente (evita enviarlo dos veces).
+    recordatorio_enviado_en = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "citas"

@@ -4,6 +4,7 @@ Reglas de negocio de la agenda médica: cálculo de franjas y disponibilidad (CU
 Las funciones `generar_franjas` y `franja_bloqueada` son puras (no usan la base de datos)
 para poder probarlas de forma unitaria.
 """
+
 from datetime import date, datetime, time, timedelta
 
 from django.db import transaction
@@ -37,7 +38,7 @@ def generar_franjas(hora_inicio: time, hora_fin: time, duracion_minutos: int) ->
 
 
 def franja_bloqueada(hora: time, duracion_minutos: int, bloqueos) -> bool:
-    """True si la franja [hora, hora+duración) se cruza con algún bloqueo (cada bloqueo tiene hora_inicio y hora_fin)."""
+    """True si la franja [hora, hora+duración) se cruza con algún bloqueo (con hora_inicio y hora_fin)."""
     fin_franja = _sumar_minutos(hora, duracion_minutos)
     return any(hora < bloqueo.hora_fin and fin_franja > bloqueo.hora_inicio for bloqueo in bloqueos)
 
@@ -113,7 +114,9 @@ def agenda_del_dia(doctor: Doctor, fecha: date) -> dict:
             {
                 "hora": hora.strftime("%H:%M"),
                 "estado": "cita" if cita else ("bloqueada" if bloqueo else "libre"),
-                "cita": None if cita is None else {
+                "cita": None
+                if cita is None
+                else {
                     "id_cita": cita.id_cita,
                     "paciente": f"{cita.paciente.nombres} {cita.paciente.apellidos}",
                     "documento": f"{cita.paciente.tipo_documento} {cita.paciente.numero_documento}",
@@ -163,10 +166,16 @@ def crear_bloqueo(usuario, doctor: Doctor, fecha: date, hora_inicio: time, hora_
             ).select_related("paciente__usuario", "doctor__especialidad")
         )
         auditoria.registrar(
-            usuario, "BLOQUEAR", "bloqueos_agenda", bloqueo.id_bloqueo, detalle=f"{len(afectadas)} citas en el intervalo"
+            usuario,
+            "BLOQUEAR",
+            "bloqueos_agenda",
+            bloqueo.id_bloqueo,
+            detalle=f"{len(afectadas)} citas en el intervalo",
         )
         for cita in afectadas:
             notificaciones.cita_afectada_por_bloqueo(cita, motivo)
+        if afectadas:
+            notificaciones.bloqueo_con_citas_afectadas(doctor, len(afectadas), motivo)
     return bloqueo, afectadas
 
 

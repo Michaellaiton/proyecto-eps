@@ -1,4 +1,5 @@
 """Controladores del módulo de administración. Todos exigen el rol ADMIN (REQ-07)."""
+
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
@@ -9,14 +10,14 @@ from rest_framework.views import APIView
 
 from aplicaciones.auditoria import servicios as auditoria
 from aplicaciones.auditoria.models import Auditoria
-from aplicaciones.citas.models import Cita
 from aplicaciones.medicos.models import Doctor, Especialidad
 from aplicaciones.medicos.serializadores import EspecialidadSerializador
 from aplicaciones.usuarios.models import Usuario
 from aplicaciones.usuarios.permisos import EsAdmin
+from configuracion.bd import alias_lectura
 from configuracion.paginacion import PaginacionEstandar
 
-from . import servicios
+from . import exportaciones, servicios
 from .serializadores import (
     ActualizarUsuarioSerializador,
     AuditoriaSerializador,
@@ -40,9 +41,7 @@ class VistaResumen(APIView):
         return Response(servicios.resumen())
 
 
-class UsuariosVista(
-    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
-):
+class UsuariosVista(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """
     GET    /api/v1/administracion/usuarios/?rol=&buscar=&activo=
     POST   /api/v1/administracion/usuarios/
@@ -149,24 +148,7 @@ class ListaCitasAdmin(ListAPIView):
     pagination_class = PaginacionEstandar
 
     def get_queryset(self):
-        citas = Cita.objects.select_related("doctor__especialidad", "paciente").order_by("-fecha", "-hora")
-        parametros = self.request.query_params
-        if parametros.get("desde"):
-            citas = citas.filter(fecha__gte=parametros["desde"])
-        if parametros.get("hasta"):
-            citas = citas.filter(fecha__lte=parametros["hasta"])
-        if parametros.get("id_doctor", "").isdigit():
-            citas = citas.filter(doctor_id=parametros["id_doctor"])
-        if parametros.get("estado"):
-            citas = citas.filter(estado=parametros["estado"])
-        if parametros.get("buscar"):
-            texto = parametros["buscar"].strip()
-            citas = citas.filter(
-                Q(paciente__numero_documento__icontains=texto)
-                | Q(paciente__nombres__icontains=texto)
-                | Q(paciente__apellidos__icontains=texto)
-            )
-        return citas
+        return servicios.filtrar_citas(self.request.query_params)
 
     def list(self, solicitud, *args, **kwargs):
         FiltroCitasSerializador(data=solicitud.query_params).is_valid(raise_exception=True)
@@ -201,3 +183,28 @@ class ListaAuditoria(ListAPIView):
         if parametros.get("usuario"):
             registros = registros.filter(usuario__username__icontains=parametros["usuario"])
         return registros
+
+
+# --- Exportaciones CSV ---
+
+
+class VistaExportarOcupacion(APIView):
+    """GET /api/v1/administracion/reportes/ocupacion/exportar/?desde=&hasta=  → archivo CSV (CU-05)."""
+
+    permission_classes = [EsAdmin]
+
+    def get(self, solicitud):
+        consulta = ConsultaRangoFechasSerializador(data=solicitud.query_params)
+        consulta.is_valid(raise_exception=True)
+        return exportaciones.reporte_ocupacion_csv(servicios.reporte_ocupacion(**consulta.validated_data))
+
+
+class VistaExportarCitas(APIView):
+    """GET /api/v1/administracion/citas/exportar/?desde=&hasta=&id_doctor=&estado=&buscar=  → archivo CSV."""
+
+    permission_classes = [EsAdmin]
+
+    def get(self, solicitud):
+        FiltroCitasSerializador(data=solicitud.query_params).is_valid(raise_exception=True)
+        citas = servicios.filtrar_citas(solicitud.query_params, bd=alias_lectura())
+        return exportaciones.citas_csv(citas[: servicios.MAXIMO_FILAS_EXPORTACION])

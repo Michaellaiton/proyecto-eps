@@ -44,3 +44,22 @@ export async function solicitarApi(ruta, opciones = {}) {
   }
   return datos
 }
+
+// Descarga un archivo de la API (p. ej. un CSV) con la sesión actual y lo guarda en el equipo.
+export async function descargarArchivo(ruta, nombrePorDefecto) {
+  const token = leerSesion()?.token
+  const respuesta = await fetch(`${URL_API}${ruta}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+  if (!respuesta.ok) {
+    const datos = await respuesta.json().catch(() => null)
+    const error = new Error(mensajeDeError(datos, respuesta.status))
+    error.estado = respuesta.status
+    throw error
+  }
+  const disposicion = respuesta.headers.get('Content-Disposition') ?? ''
+  const nombre = disposicion.match(/filename="([^"]+)"/)?.[1] ?? nombrePorDefecto
+  const enlace = document.createElement('a')
+  enlace.href = URL.createObjectURL(await respuesta.blob())
+  enlace.download = nombre
+  enlace.click()
+  URL.revokeObjectURL(enlace.href)
+}

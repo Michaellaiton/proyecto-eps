@@ -4,6 +4,7 @@ Excepciones de negocio y su traducción a códigos HTTP.
 Los servicios lanzan estas excepciones sin conocer HTTP; DRF las convierte en la respuesta adecuada.
 Contrato de errores del informe de Calidad (Tabla 11): 404 inexistente, 409 conflicto, 422 regla inválida.
 """
+
 from rest_framework import status
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.views import exception_handler

@@ -1,7 +1,9 @@
 """Controladores (vistas de la API) de médicos: catálogo y disponibilidad (CU-01), agenda y bloqueos (CU-04)."""
+
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -19,8 +21,9 @@ from .serializadores import (
 
 
 class ListaEspecialidades(generics.ListAPIView):
-    """GET /api/v1/medicos/especialidades/"""
+    """GET /api/v1/medicos/especialidades/  Catálogo público (se muestra en la página de inicio)."""
 
+    permission_classes = [AllowAny]
     queryset = Especialidad.objects.all()
     serializer_class = EspecialidadSerializador
 
@@ -102,7 +105,11 @@ class VistaMisBloqueos(APIView):
                 **BloqueoAgendaSerializador(bloqueo).data,
                 "citas_existentes_en_intervalo": len(afectadas),
                 "citas_afectadas": [
-                    {"id_cita": c.id_cita, "hora": c.hora.strftime("%H:%M"), "paciente": f"{c.paciente.nombres} {c.paciente.apellidos}"}
+                    {
+                        "id_cita": c.id_cita,
+                        "hora": c.hora.strftime("%H:%M"),
+                        "paciente": f"{c.paciente.nombres} {c.paciente.apellidos}",
+                    }
                     for c in afectadas
                 ],
             },

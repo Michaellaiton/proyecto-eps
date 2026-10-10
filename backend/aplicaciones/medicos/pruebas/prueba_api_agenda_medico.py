@@ -1,4 +1,5 @@
 """Pruebas del rol DOCTOR: agenda, bloqueos (REQ-05) y registro de atención (CU-04). Requieren PostgreSQL."""
+
 from datetime import time, timedelta
 
 import pytest
@@ -25,17 +26,23 @@ def _bloquear(cliente, fecha, inicio="07:00", fin="08:00", motivo="Junta médica
 def otro_doctor(db):
     usuario = Usuario.objects.create_user(username="medico2", password=CLAVE_PRUEBA, rol=Rol.DOCTOR)
     return Doctor.objects.create(
-        usuario=usuario, especialidad=Especialidad.objects.create(nombre="Pediatría"),
-        nombres="Luis", apellidos="Prueba", registro_medico="RM-0002",
+        usuario=usuario,
+        especialidad=Especialidad.objects.create(nombre="Pediatría"),
+        nombres="Luis",
+        apellidos="Prueba",
+        registro_medico="RM-0002",
     )
 
 
 # --- Agenda del día ---
 
+
 def prueba_CP_CU04_04_agenda_muestra_franjas_citas_y_bloqueos(doctor, crear_paciente, cliente_de):
     fecha = proximo_dia_habil()
     Cita.objects.create(paciente=crear_paciente(1), doctor=doctor, fecha=fecha, hora=time(8, 0))
-    BloqueoAgenda.objects.create(doctor=doctor, fecha=fecha, hora_inicio=time(7, 0), hora_fin=time(7, 40), motivo="Junta")
+    BloqueoAgenda.objects.create(
+        doctor=doctor, fecha=fecha, hora_inicio=time(7, 0), hora_fin=time(7, 40), motivo="Junta"
+    )
 
     agenda = cliente_de(doctor.usuario).get("/api/v1/medicos/agenda/", {"fecha": fecha.isoformat()}).json()
     por_hora = {f["hora"]: f for f in agenda["franjas"]}
@@ -46,7 +53,13 @@ def prueba_CP_CU04_04_agenda_muestra_franjas_citas_y_bloqueos(doctor, crear_paci
     assert por_hora["07:20"]["estado"] == "bloqueada"
     assert por_hora["07:40"]["estado"] == "libre"
     assert agenda["resumen"] == {
-        "franjas": 15, "citas": 1, "agendadas": 1, "atendidas": 0, "no_asistio": 0, "libres": 12, "bloqueadas": 2,
+        "franjas": 15,
+        "citas": 1,
+        "agendadas": 1,
+        "atendidas": 0,
+        "no_asistio": 0,
+        "libres": 12,
+        "bloqueadas": 2,
     }
 
 
@@ -70,6 +83,7 @@ def prueba_paciente_no_accede_a_la_agenda_del_medico(crear_paciente, cliente_de)
 
 
 # --- Bloqueos (REQ-05) ---
+
 
 def prueba_CP_CU04_01_bloqueo_informa_citas_existentes(doctor, crear_paciente, cliente_de):
     fecha = proximo_dia_habil()
@@ -113,9 +127,11 @@ def prueba_listar_y_eliminar_bloqueo_libera_la_disponibilidad(doctor, crear_paci
 
     listado = cliente.get("/api/v1/medicos/bloqueos/").json()
     eliminado = cliente.delete(f"/api/v1/medicos/bloqueos/{id_bloqueo}/")
-    franjas = cliente_de(crear_paciente(1).usuario).get(
-        f"/api/v1/medicos/{doctor.id_doctor}/disponibilidad/", {"fecha": fecha.isoformat()}
-    ).json()["franjas"]
+    franjas = (
+        cliente_de(crear_paciente(1).usuario)
+        .get(f"/api/v1/medicos/{doctor.id_doctor}/disponibilidad/", {"fecha": fecha.isoformat()})
+        .json()["franjas"]
+    )
 
     assert [b["id_bloqueo"] for b in listado] == [id_bloqueo]
     assert eliminado.status_code == 204
@@ -130,6 +146,7 @@ def prueba_no_se_elimina_bloqueo_de_otro_medico(doctor, otro_doctor, cliente_de)
 
 # --- Registro de atención (CU-04) ---
 
+
 def _cita_pasada(doctor, paciente):
     hace_una_hora = timezone.localtime() - timedelta(hours=1)
     return Cita.objects.create(paciente=paciente, doctor=doctor, fecha=hace_una_hora.date(), hora=hace_una_hora.time())
@@ -139,7 +156,9 @@ def _cita_pasada(doctor, paciente):
 def prueba_medico_registra_atencion(estado, doctor, crear_paciente, cliente_de):
     cita = _cita_pasada(doctor, crear_paciente(1))
 
-    respuesta = cliente_de(doctor.usuario).patch(f"/api/v1/citas/{cita.id_cita}/atencion/", {"estado": estado}, format="json")
+    respuesta = cliente_de(doctor.usuario).patch(
+        f"/api/v1/citas/{cita.id_cita}/atencion/", {"estado": estado}, format="json"
+    )
 
     assert respuesta.status_code == 200
     assert respuesta.json()["estado"] == estado
@@ -149,7 +168,9 @@ def prueba_medico_registra_atencion(estado, doctor, crear_paciente, cliente_de):
 def prueba_no_se_registra_atencion_de_una_cita_futura(doctor, crear_paciente, cliente_de):
     cita = Cita.objects.create(paciente=crear_paciente(1), doctor=doctor, fecha=proximo_dia_habil(), hora=time(8, 0))
 
-    respuesta = cliente_de(doctor.usuario).patch(f"/api/v1/citas/{cita.id_cita}/atencion/", {"estado": "Atendida"}, format="json")
+    respuesta = cliente_de(doctor.usuario).patch(
+        f"/api/v1/citas/{cita.id_cita}/atencion/", {"estado": "Atendida"}, format="json"
+    )
 
     assert respuesta.status_code == 422
 
@@ -170,12 +191,17 @@ def prueba_atencion_ya_registrada_409(doctor, crear_paciente, cliente_de):
     cita = _cita_pasada(doctor, crear_paciente(1))
     cliente.patch(f"/api/v1/citas/{cita.id_cita}/atencion/", {"estado": "Atendida"}, format="json")
 
-    assert cliente.patch(f"/api/v1/citas/{cita.id_cita}/atencion/", {"estado": "No asistio"}, format="json").status_code == 409
+    assert (
+        cliente.patch(f"/api/v1/citas/{cita.id_cita}/atencion/", {"estado": "No asistio"}, format="json").status_code
+        == 409
+    )
 
 
 def prueba_estado_de_atencion_invalido_422(doctor, crear_paciente, cliente_de):
     cita = _cita_pasada(doctor, crear_paciente(1))
 
-    respuesta = cliente_de(doctor.usuario).patch(f"/api/v1/citas/{cita.id_cita}/atencion/", {"estado": "Cancelada"}, format="json")
+    respuesta = cliente_de(doctor.usuario).patch(
+        f"/api/v1/citas/{cita.id_cita}/atencion/", {"estado": "Cancelada"}, format="json"
+    )
 
     assert respuesta.status_code == 422

@@ -12,6 +12,9 @@ htmlcov/
 # Node
 node_modules/
 dist/
+coverage/
+playwright-report/
+test-results/
 
 # Editores y sistema
 .vscode/

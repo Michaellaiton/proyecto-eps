@@ -18,7 +18,9 @@ export function formatearFecha(fechaIso) {
 
 export function formatearFechaHora(fechaHoraIso) {
   if (!fechaHoraIso) return '—'
-  return new Date(fechaHoraIso).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })
+  return new Date(fechaHoraIso)
+    .toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
+    .replaceAll('.', '')
 }
 
 // Primer y último día del mes actual en formato AAAA-MM-DD.
@@ -41,4 +43,23 @@ export function yaLlego(fechaIso, hora) {
   const [anio, mes, dia] = fechaIso.split('-').map(Number)
   const [horas, minutos] = hora.split(':').map(Number)
   return new Date(anio, mes - 1, dia, horas, minutos) <= new Date()
+}
+
+// Fecha corta para tarjetas: "lun 12 oct".
+export function formatearFechaCorta(fechaIso) {
+  const [anio, mes, dia] = fechaIso.split('-').map(Number)
+  return new Date(anio, mes - 1, dia)
+    .toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short' })
+    .replaceAll('.', '')
+}
+
+// Tiempo relativo corto: "ahora", "hace 5 min", "hace 3 h", "hace 2 días".
+export function haceTiempo(fechaHoraIso) {
+  const minutos = Math.max(0, Math.round((Date.now() - new Date(fechaHoraIso).getTime()) / 60000))
+  if (minutos < 1) return 'ahora'
+  if (minutos < 60) return `hace ${minutos} min`
+  const horas = Math.round(minutos / 60)
+  if (horas < 24) return `hace ${horas} h`
+  const dias = Math.round(horas / 24)
+  return `hace ${dias} ${dias === 1 ? 'día' : 'días'}`
 }

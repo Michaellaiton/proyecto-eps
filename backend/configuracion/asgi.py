@@ -1,4 +1,5 @@
 """Punto de entrada ASGI para servidores asíncronos."""
+
 import os
 
 from django.core.asgi import get_asgi_application

@@ -1,4 +1,5 @@
 """Controladores de citas: agendar (CU-02), consultar las propias, cancelar (CU-03) y registrar atención (CU-04)."""
+
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView

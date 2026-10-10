@@ -5,6 +5,7 @@ Uso:  python manage.py sembrar_datos
 La contraseña común de las cuentas se toma de EPS_CLAVE_USUARIOS_DEMO en el archivo .env.
 Es idempotente: se puede ejecutar varias veces sin duplicar registros.
 """
+
 import os
 from datetime import time
 
@@ -40,8 +41,13 @@ class Command(BaseCommand):
 
         with transaction.atomic():
             self._crear_usuario(
-                "admin", clave, Rol.ADMIN, is_staff=True, is_superuser=True,
-                first_name="Administrador", last_name="del sistema",
+                "admin",
+                clave,
+                Rol.ADMIN,
+                is_staff=True,
+                is_superuser=True,
+                first_name="Administrador",
+                last_name="del sistema",
             )
             especialidades = {n: Especialidad.objects.get_or_create(nombre=n)[0] for n in ESPECIALIDADES}
             for numero, (nombres, apellidos, especialidad) in enumerate(MEDICOS, start=1):
